@@ -1,75 +1,93 @@
 # Real-Time Speedometer
 
-A full stack app that simulates vehicle speed sensor data, stores it in PostgreSQL, and displays it on a live speedometer UI using WebSockets.
+A full-stack application that simulates vehicle speed sensor data in real-time. Speed data is generated on the server, persisted to PostgreSQL, and streamed to the frontend via WebSockets – all displayed on a live speedometer gauge.
 
-Built with Node.js, Express, PostgreSQL, React, and Docker.
+**Tech:** Node.js • Express • PostgreSQL • React • TypeScript • Docker
 
-## How It Works
+## How It Actually Works
 
-The system has three main parts:
+This isn't just an in-memory simulation. The whole system is built around one core principle: **the UI always shows what's actually in the database**.
 
-1. **Sensor simulator**  
-Runs on the server and generates a random speed value every second using a random walk between 0–120 km/h. The value is then inserted into the database.
+Here's the flow:
 
-2. **WebSocket server**  
-After each insert, the server reads the latest speed from PostgreSQL and pushes it to all connected clients.
+1. **The Sensor Simulator** generates a speed value every second (using a realistic random walk between 0–120 km/h) and inserts it into PostgreSQL
+2. **The Server** reads that latest speed back from the database (not from memory)
+3. **WebSockets** broadcast the data to all connected clients instantly
+4. **The React App** receives the update and animates the speedometer gauge
 
-3. **React frontend**  
-Connects to the WebSocket server, receives speed updates, and renders them on a speedometer gauge in real time.
+Why read from the database instead of just using the in-memory value? Because if the app crashes or restarts, the UI always reflects what's actually persisted. It's more robust that way.
 
-The key thing here is that the UI always reflects what is stored in the database rather than an in memory value. The server writes to Postgres first, reads back the latest row, and only then broadcasts it.
-
-## Architecture
+## System Architecture
 
 ```
-┌────────────────────┐
-│  Sensor Simulator  │
-│  (generates speed) │
-└────────┬───────────┘
-         │ INSERT
-         ▼
-┌────────────────────┐
-│    PostgreSQL      │
-│   (speed_data)     │
-└────────┬───────────┘
-         │ SELECT latest
-         ▼
-┌────────────────────┐        WebSocket         ┌──────────────────┐
-│  Node.js Server    │ ──────────────────────▶  │  React Client    │
-│  (Express + WS)    │     { speed: 42 }        │  (Speedometer)   │
-└────────────────────┘                          └──────────────────┘
+┌─────────────────────┐
+│ Sensor Simulator    │─┐
+│ (generates speed)   │ │ INSERT every 1s
+└─────────────────────┘ │
+                        ▼
+              ┌──────────────────┐
+              │   PostgreSQL     │
+              │  (speed_data)    │
+              └────────┬─────────┘
+                       │ SELECT latest
+                       ▼
+    ┌────────────────────────────────┐
+    │    Node.js Server              │
+    │  (Express + WebSocket)          │
+    │                                │
+    │  • Listens for DB updates      │
+    │  • Broadcasts to all clients   │
+    └────────────┬───────────────────┘
+                 │ WebSocket
+                 │ { speed: 42 }
+                 ▼
+         ┌──────────────────┐
+         │  React Client    │
+         │  • Connects      │
+         │  • Receives      │
+         │  • Animates      │
+         └──────────────────┘
 ```
 
-Data flows one way: **generate → store → read → broadcast → display**.
+Everything flows in one direction: **generate → store → read → broadcast → display**. No shortcuts, no in-memory hacks.
 
-## Project Structure
+## What's in the Code
 
 ```
 unbox-assignment/
 ├── server/
-│   ├── server.js                 # express + websocket setup
+│   ├── server.js                    # Express + WebSocket server setup
 │   ├── services/
-│   │   └── sensorSimulator.js    # speed generation + db insert + ws broadcast
+│   │   └── sensorSimulator.js       # Generates speed, inserts to DB, broadcasts via WS
 │   ├── db/
-│   │   ├── db.js                 # postgres connection pool
-│   │   └── init.sql              # table creation (used by docker)
+│   │   ├── db.js                    # PostgreSQL connection pool
+│   │   └── init.sql                 # Table schema (auto-runs in Docker)
 │   ├── Dockerfile
-│   └── .dockerignore
+│   └── package.json
 ├── client/
 │   ├── src/
-│   │   ├── App.tsx               # main component, manages ws connection
+│   │   ├── App.tsx                  # Main component, manages WebSocket connection
 │   │   ├── components/
-│   │   │   └── Speedometer.tsx   # gauge component (react-d3-speedometer)
+│   │   │   └── Speedometer.tsx      # Speedometer gauge component
 │   │   └── services/
-│   │       └── websocket.ts      # websocket client logic
+│   │       └── websocket.ts         # WebSocket client logic
 │   ├── Dockerfile
-│   └── .dockerignore
-└── docker-compose.yml            # runs everything together
+│   ├── package.json
+│   └── vite.config.ts
+└── docker-compose.yml               # Orchestrates all containers
 ```
 
-## Running with Docker
+**Key files to understand the flow:**
+- `server/services/sensorSimulator.js` – Where speed gets generated and broadcast
+- `server/server.js` – Where the WebSocket server lives
+- `client/src/services/websocket.ts` – Where the client connects and listens
+- `client/src/App.tsx` – The main React component that uses the WebSocket
 
-Make sure Docker Desktop is installed and running.
+## Getting Started with Docker
+
+This is the easiest way to run everything.
+
+**Prerequisites:** Docker Desktop installed and running.
 
 ```bash
 git clone https://github.com/howdikshant/unbox-assignment.git
@@ -77,40 +95,33 @@ cd unbox-assignment
 docker-compose up --build
 ```
 
-This starts three containers:
+That's it. Docker Compose will spin up three containers:
 
-**db**  
-PostgreSQL 16. It creates the `speed_data` table automatically using `init.sql`.
+- **db** – PostgreSQL 16 with the `speed_data` table auto-created
+- **server** – Node.js backend (waits for DB to be healthy before starting)
+- **client** – Vite dev server with hot reload
 
-**server**  
-Node.js backend running on port 8080. It waits for Postgres to become healthy before starting.
+Open your browser to **http://localhost:5173** and watch the speedometer update every second.
 
-**client**  
-Vite dev server running on port 5173.
-
-Once everything is running, open:
-
-```
-http://localhost:5173
-```
-
-To stop the containers:
-
+To stop:
 ```bash
 docker-compose down
 ```
 
-## Running Locally (without Docker)
+## Running Locally (No Docker)
 
-You will need Node.js and PostgreSQL installed.
+If you prefer to run this without containers, you'll need Node.js and PostgreSQL installed locally.
 
-### 1. Set up the database
+### Setup the Database
+
+```bash
+createdb speed_db
+psql speed_db
+```
+
+Then paste this into the psql prompt:
 
 ```sql
-CREATE DATABASE speed_db;
-
-\c speed_db
-
 CREATE TABLE speed_data (
   id SERIAL PRIMARY KEY,
   speed INTEGER NOT NULL,
@@ -118,7 +129,7 @@ CREATE TABLE speed_data (
 );
 ```
 
-### 2. Start the server
+### Start the Server
 
 ```bash
 cd server
@@ -126,7 +137,11 @@ npm install
 node server.js
 ```
 
-### 3. Start the client
+The server will connect to `localhost:5432` by default. Make sure PostgreSQL is running.
+
+### Start the Client
+
+In a new terminal:
 
 ```bash
 cd client
@@ -134,37 +149,38 @@ npm install
 npm run dev
 ```
 
-Then open:
+Head to **http://localhost:5173**.
 
+## The Tech Stack
+
+| Part | Technology |
+|------|-----------|
+| Frontend | React 18, TypeScript, Vite, react-d3-speedometer |
+| Backend | Node.js, Express, ws (WebSocket library) |
+| Database | PostgreSQL 16 |
+| Deployment | Docker, Docker Compose |
+
+Nothing fancy – just solid, proven tools that work well together.
+
+## How the Speed Simulation Works
+
+The speed doesn't jump around randomly – it changes gradually using a **random walk** algorithm. This makes the speedometer animation smooth and realistic.
+
+**The algorithm (runs every second):**
 ```
-http://localhost:5173
+change = random integer from -5 to +5
+speed = speed + change
+if speed < 0: speed = 0
+if speed > 120: speed = 120
 ```
 
-## Tech Stack
+So if the current speed is 40 km/h, it might become 38, 39, 40, 41, 42, etc. – always believable, never erratic.
 
-| Layer | Tech |
-|------|------|
-| Frontend | React, TypeScript, Vite, react-d3-speedometer |
-| Backend | Node.js, Express, ws (WebSocket) |
-| Database | PostgreSQL |
-| Containerization | Docker, Docker Compose |
+## Ports and Endpoints
 
-## How the Sensor Simulator Works
-
-The speed value does not jump randomly. It uses a random walk so that changes feel more realistic.
-
-```
-each second:
-  change = random integer between -5 and +5
-  speed = speed + change
-  clamp speed to [0, 120]
-```
-
-Because of this, the speed gradually increases or decreases instead of jumping between unrelated values. This makes the speedometer animation smoother.
-
-## Docker Setup Details
-
-The project runs using three containers managed by `docker-compose.yml`.
+- **Frontend:** http://localhost:5173
+- **Backend WebSocket:** ws://localhost:8080
+- **Database:** localhost:5432 (PostgreSQL)
 
 **PostgreSQL**  
 Uses a healthcheck with `pg_isready` so the server does not try to connect before the database is ready.
