@@ -1,6 +1,6 @@
 # Real-Time Speedometer
 
-A full-stack application that simulates vehicle speed sensor data in real-time. Speed data is generated on the server, persisted to PostgreSQL, and streamed to the frontend via WebSockets – all displayed on a live speedometer gauge.
+A full-stack application that simulates vehicle speed sensor data in real-time. Speed data is generated on the server, persisted to PostgreSQL, and streamed to the frontend via WebSockets. All displayed on a live speedometer gauge.
 
 **Tech:** Node.js • Express • PostgreSQL • React • TypeScript • Docker
 
@@ -160,7 +160,7 @@ Head to **http://localhost:5173**.
 | Database | PostgreSQL 16 |
 | Deployment | Docker, Docker Compose |
 
-Nothing fancy – just solid, proven tools that work well together.
+Nothing fancy - just solid, proven tools that work well together.
 
 ## How the Speed Simulation Works
 
@@ -174,7 +174,7 @@ if speed < 0: speed = 0
 if speed > 120: speed = 120
 ```
 
-So if the current speed is 40 km/h, it might become 38, 39, 40, 41, 42, etc. – always believable, never erratic.
+So if the current speed is 40 km/h, it might become 38, 39, 40, 41, 42, etc. Always believable, never erratic.
 
 ## Ports and Endpoints
 
@@ -182,15 +182,20 @@ So if the current speed is 40 km/h, it might become 38, 39, 40, 41, 42, etc. –
 - **Backend WebSocket:** ws://localhost:8080
 - **Database:** localhost:5432 (PostgreSQL)
 
-**PostgreSQL**  
-Uses a healthcheck with `pg_isready` so the server does not try to connect before the database is ready.
+## How Docker Orchestration Works
 
-**Server**  
-Connects to Postgres using the Docker service name `db` as the hostname instead of localhost.
+**PostgreSQL** has a healthcheck that runs `pg_isready` to make sure the database is actually ready before anything tries to connect.
 
-**Client**  
-Runs the Vite dev server with the `--host` flag so it can be accessed outside the container.
+**The Server** connects to Postgres using the Docker service name `db` as the hostname, which Docker's internal DNS resolves automatically.
 
-The `init.sql` file is mounted into Postgres's initialization directory so the table is created automatically on first boot.
+**The Client** runs the Vite dev server with `--host` so it can be accessed outside the container.
 
-Database credentials are provided through environment variables. When the project runs locally without Docker, the code falls back to default values.
+**The init.sql file** gets mounted into Postgres's initialization directory, so the table is created automatically on first startup.
+
+Environment variables handle database credentials. When running locally without Docker, the code falls back to sensible defaults.
+
+## Getting Started with the Code
+
+This project is pretty straightforward to extend. Want to add more sensor types? Just expand the `speed_data` table and update the simulator. Want historical charts? Add a new component and query the database. The architecture is flexible enough to handle it.
+
+Feel free to fork, modify, and build on top of this. It's designed to be easy to understand and expand.
