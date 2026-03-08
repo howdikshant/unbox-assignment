@@ -194,8 +194,4 @@ So if the current speed is 40 km/h, it might become 38, 39, 40, 41, 42, etc. Alw
 
 Environment variables handle database credentials. When running locally without Docker, the code falls back to sensible defaults.
 
-## Getting Started with the Code
-
-This project is pretty straightforward to extend. Want to add more sensor types? Just expand the `speed_data` table and update the simulator. Want historical charts? Add a new component and query the database. The architecture is flexible enough to handle it.
-
-Feel free to fork, modify, and build on top of this. It's designed to be easy to understand and expand.
+## Thankyou
