@@ -49,7 +49,7 @@ Why read from the database instead of just using the in-memory value? Because if
          └──────────────────┘
 ```
 
-Everything flows in one direction: **generate → store → read → broadcast → display**. No shortcuts, no in-memory hacks.
+Everything flows in one direction: **generate → store → read → broadcast → display**.
 
 ## What's in the Code
 
@@ -160,11 +160,11 @@ Head to **http://localhost:5173**.
 | Database | PostgreSQL 16 |
 | Deployment | Docker, Docker Compose |
 
-Nothing fancy - just solid, proven tools that work well together.
+Suitable for me because I have some experience in these frameworks.
 
 ## How the Speed Simulation Works
 
-The speed doesn't jump around randomly – it changes gradually using a **random walk** algorithm. This makes the speedometer animation smooth and realistic.
+The speed doesn't jump around randomly it changes gradually using an algorithm. This makes the speedometer animation smooth and realistic.
 
 **The algorithm (runs every second):**
 ```
