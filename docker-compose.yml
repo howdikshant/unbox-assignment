@@ -1,0 +1,39 @@
+services:
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: howdikshant
+      POSTGRES_DB: speed_db
+    ports:
+      - "5432:5432"
+    volumes:
+      # runs init.sql automatically on first start to create the table
+      - ./server/db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 3s
+      timeout: 3s
+      retries: 5
+
+  server:
+    build: ./server
+    ports:
+      - "8080:8080"
+    environment:
+      DB_USER: postgres
+      DB_HOST: db
+      DB_NAME: speed_db
+      DB_PASSWORD: howdikshant
+      DB_PORT: 5432
+    depends_on:
+      db:
+        condition: service_healthy
+
+  client:
+    build: ./client
+    ports:
+      - "5173:5173"
+    depends_on:
+      - server
